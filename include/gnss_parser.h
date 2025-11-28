@@ -25,17 +25,18 @@ class GnssParser {
         std::regex header_regex{"\\$(?:(?:GP|GL|GA|GB|GN)(?:GGA|GLL|GSA|RMC|VTG|GST|ZDA|DTM|GNS)|(?:GP|GL|GA|GB)GSV)"};
         std::regex gaa_regex{"\\$(GP|GL|GA|GB|GN)(GGA),(\\d{6}.\\d{2})?,(\\d{4}.\\d{5})?,[NS]?,(\\d{5}.\\d{5})?,[EW]?,[012456]?,(\\d{2})?,(\\d{1,2}.\\d{1,5})?,(\\d{1,5}.\\d{1,5})?,M?,(\\d{1,5}.\\d{1,5})?,M?,(\\d{1,5}.\\d{1,5})?,\\*[\\da-fA-F]{2}\\n?\\r?"};
         std::regex gll_regex{"\\$(GP|GL|GA|GB|GN)(GLL),(\\d{4}.\\d{5})?,[NS]?,(\\d{5}.\\d{5})?,[EW]?,(\\d{6}.\\d{2})?,[AV]?,[AV]?\\*[\\da-fA-F]{2}\r?\n?"};
-        std::regex gsa_regex{"\\$(GP|GL|GA|GB|GN)(RMC),(\\d{6}.\\d{2})?,[AV]?,(\\d{4}.\\d{5})?,[NS]?,(\\d{5}.\\d{5})?,[EW]?,(\\d{1,5}.\\d{1,5})?,(\\d{1,3}.\\d{1,2})?,(\\d{6})?,(\\d{3}.\\d{2})?,[EW]?,[AV]?,[V]\\*[\\dA-F]{2}\r?\n?"};
+        std::regex gsa_regex{"\\$(GP|GL|GA|GB|GN)(GSA),[AM]?,[123]?,(\\d{0,3},){0,12}(\\d{1,2}.\\d{1,3},){0,3}[\\dA-F]{1,2}\\*[\\dA-F]{2}\r?\n?"};
         std::regex gsv_regex{"\\$(GP|GL|GA|GB|GN)(GSV),(\\d{1})?,(\\d{1})?,(\\d{1,3})?(,\\d{0,3}?,\\d{0,2}?,\\d{0,3}?,\\d{0,2}?){0,4},[\\dA-F]{1,2}\\*[\\dA-F]{2}\r?\n?"};
         std::regex rmc_regex{"\\$(GP|GL|GA|GB|GN)(RMC),\\d{6}?.\\d{2}?,[NEAFDR]?,\\d{4}.\\d{5,6}?,[NS]?,\\d{5}.\\d{5,6}?,[EW]?,\\d{1,3}.\\d{1,3}?,\\d{0,3}.\\d{1,3}?,\\d{6}?,\\d{0,2},\\d{0,2},[NEAFDR]?,V?\\*[\\dA-F]{2}\r?\n?"};
         std::regex vtg_regex{"\\$(GP|GL|GA|GB|GN)(VTG),(\\d{1,3}.\\d{1,2})?,[T],(\\d{1,3}.\\d{1,2})?,[M],(\\d{1,3}.\\d{1,3})?,[N],(\\d{1,3}.\\d{1,3})?,[K],[ADEN]?\\*[0-9A-F]{2}\r?\n?"};
         std::regex gst_regex{"\\$(GP|GL|GA|GB|GN)(GST),(\\d{6}.\\d{2})?,(\\d{1,5}.\\d{1,5})?,(\\d{1,5}.\\d{1,5})?,(\\d{1,5}.\\d{1,5})?,(\\d{1,5}.\\d{1,5})?,(\\d{1,2}.\\d{1,3})?,(\\d{1,2}.\\d{1,3})?,(\\d{1,2}.\\d{1,3})?\\*[0-9A-F]{2}\r?\n?"};
-        std::regex zda_regex{"\\$(GP|GL|GA|GB|GN)(ZDA),(\\d{6}.\\d{2})?,(\\d{2})?,(\\d{2})?,(\\d{4})?,([0]{2}),([0]{2})\\*[0-9A-F]{2}\r?\n?"};
+        std::regex zda_regex{"\\$(GP|GL|GA|GB|GN)(ZDA),(\\d{6}.\\d{2})?,(\\d{2})?,(\\d{2})?,(\\d{4})?,00,00\\*[0-9A-F]{2}\r?\n?"};
         std::regex dtm_regex{"\\$(GP|GL|GA|GB|GN)(DTM),(W84|P90|999)?,,(\\d{1,3}.\\d{1,2})?,[NS]?,(\\d{1,3}.\\d{1,2})?,[EW]?,(-?\\d{1,3}.\\d{1,2})?,W84\\*[\\dA-F]{2}\r?\n?"};
         std::regex gns_regex{"\\$(GP|GL|GA|GB|GN)(GNS),(\\d{6}.\\d{1,2})?,(\\d{4}.\\d{5,6})?,[NS]?,(\\d{5}.\\d{5,6})?,[WE]?,([NEFRAD]{4})?,[\\d]{1,2}?,(\\d{1,2}.\\d{1,2})?,(\\d{1,4}.\\d{1,5})?,(\\d{1,4}.\\d{1,5})?,(\\d{1,2}.\\d{1,2})?,(\\d{1,3})?,V\\*[\\dA-F]{2}\r?\n?"};
         const int header_length = 5;
         const int protocol_type_f_idx = 3;
         const int protocol_type_e_idx = 6;
+        const int stable_data_from_end_gsv = 3;
         using ProtocolMap = std::map<int, std::string>;
         const std::unordered_map<std::string, ProtocolMap> msg_type_map = {
             {"GGA", {
@@ -97,25 +98,25 @@ class GnssParser {
                 {1, "num_msg"},
                 {2, "msg_num"},
                 {3, "num_sv_v"},
-                // {4, "svid"},
-                // {5, "elv"},
-                // {6, "az"},
-                // {7, "cno"},
-                // {8, "svid"},
-                // {9, "elv"},
-                // {10, "az"},
-                // {11, "cno"},
-                // {12, "svid"},
-                // {13, "elv"},
-                // {14, "az"},
-                // {15, "cno"},
-                // {16, "svid"},
-                // {17, "elv"},
-                // {18, "az"},
-                // {19, "cno"},
-                {4, "signal_id"},
-                {5, "cs"},
-                {6, "cr_lf"}
+                {4, "svid"},
+                {5, "elv"},
+                {6, "az"},
+                {7, "cno"},
+                {8, "svid"},
+                {9, "elv"},
+                {10, "az"},
+                {11, "cno"},
+                {12, "svid"},
+                {13, "elv"},
+                {14, "az"},
+                {15, "cno"},
+                {16, "svid"},
+                {17, "elv"},
+                {18, "az"},
+                {19, "cno"},
+                {20, "signal_id"},
+                {21, "cs"},
+                {22, "cr_lf"}
                 
             }},
             {"RMC", {

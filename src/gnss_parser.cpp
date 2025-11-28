@@ -61,35 +61,35 @@ std::vector<std::string> GnssParser::parseMsg(std::string header, std::string& m
         std::cout << "Data is invalid. Header mistake.\n";
         return {};
     }
-    else if (!std::regex_match(msg, gaa_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, gaa_regex)) {
+        std::cout << "Data is valid. GAA\n";
     }
-    else if (!std::regex_match(msg, gll_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, gll_regex)) {
+        std::cout << "Data is valid. Gll\n";
     }
-    else if (!std::regex_match(msg, vtg_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, vtg_regex)) {
+        std::cout << "Data is valid. VTG\n";
     }
-    else if (!std::regex_match(msg, gst_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, gst_regex)) {
+        std::cout << "Data is valid. GST\n";
     }
-    else if (!std::regex_match(msg, zda_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, zda_regex)) {
+        std::cout << "Data is valid. ZDA\n";
     }
-    else if (!std::regex_match(msg, dtm_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, dtm_regex)) {
+        std::cout << "Data is valid. DTM\n";
     }
-    else if (!std::regex_match(msg, gsa_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, gsa_regex)) {
+        std::cout << "Data is valid. GSA\n";
     }
-    else if (!std::regex_match(msg, gns_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, gns_regex)) {
+        std::cout << "Data is valid. GNS \n";
     }
-    else if (!std::regex_match(msg, gsv_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, gsv_regex)) {
+        std::cout << "Data is valid. GSV \n";
     }
-    else if (!std::regex_match(msg, rmc_regex)) {
-        std::cout << "Data is valid.\n";
+    else if (std::regex_match(msg, rmc_regex)) {
+        std::cout << "Data is valid. RMC \n";
     }
     else {
         std::cout << "Data is invalid.\n";
@@ -136,6 +136,14 @@ void GnssParser::fOutput(std::vector<std::string>& v_msg){
     if (msg_type_map.count(msg_header_type)) {
         const auto& field_map = msg_type_map.at(msg_header_type);
 
+        int test_size = field_map.size() != v_msg.size();
+
+        if (field_map.size() != v_msg.size()){
+            for (int i = 0; i < field_map.size() - v_msg.size(); i++){
+                v_msg.insert(v_msg.end() - stable_data_from_end_gsv, "");
+            }
+        }
+        
         for (const auto& [index, name] : field_map) {
             bool dev_idx = index == 1;
             bool qual_stat_pos_nav_flag = name == "quality" || name == "status" || name == "pos_mode" || name == "nav_mode";
@@ -248,4 +256,3 @@ void GnssParser::fOutput(std::vector<std::string>& v_msg){
     }
     output.close();
 }
-
