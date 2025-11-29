@@ -14,11 +14,12 @@ class GnssParser {
         std::string formatUtcConverter(const std::string& utc_str);
         std::string latLotConverter(const std::string& nmea);
         std::string dateConverter(const std::string& date);
+        void gsvMsgCorrection(std::vector<std::string>& v_msg);
         // main functions
         std::string parseHeader(std::string& msg);
         std::vector<std::string> parseMsg(std::string header, std::string& msg);
         std::vector<std::string> splitNmeaMessage(const std::string& msg);
-        void fOutput(std::vector<std::string>& v_msg);
+        void fOutput(const std::string& msg, std::vector<std::string>& v_msg);
 
     private:
         std::string protocol_types[10] = {"GGA", "GLL", "GSA", "GSV", "RMC", "VTG", "GST", "ZDA", "DTM", "GNS"};
@@ -37,6 +38,7 @@ class GnssParser {
         const int protocol_type_f_idx = 3;
         const int protocol_type_e_idx = 6;
         const int stable_data_from_end_gsv = 3;
+        const int no_cr_lf_idx = 1;
         using ProtocolMap = std::map<int, std::string>;
         const std::unordered_map<std::string, ProtocolMap> msg_type_map = {
             {"GGA", {
@@ -117,7 +119,6 @@ class GnssParser {
                 {20, "signal_id"},
                 {21, "cs"},
                 {22, "cr_lf"}
-                
             }},
             {"RMC", {
                 {0, "header"},

@@ -54,6 +54,18 @@ std::string GnssParser::dateConverter(const std::string& date) {
 
 }
 
+void GnssParser::gsvMsgCorrection(std::vector<std::string>& delim_msg){
+
+    const auto& field_map_gsv = msg_type_map.at("GSV");
+
+    int test_size = field_map_gsv.size() - (delim_msg.size() + no_cr_lf_idx);
+
+    if (field_map_gsv.size() != delim_msg.size() + no_cr_lf_idx){
+        for (int i = 0; i != test_size; i++){
+            delim_msg.insert(delim_msg.end() - stable_data_from_end_gsv, "");
+        }
+    }
+}
 // main class methods
 
 std::vector<std::string> GnssParser::parseMsg(std::string header, std::string& msg){
@@ -123,11 +135,11 @@ std::vector<std::string> GnssParser::splitNmeaMessage(const std::string& msg) {
             result.push_back(checksum);
         }
     }
-    fOutput(result);
+    fOutput(msg, result);
     return result;
 }
 
-void GnssParser::fOutput(std::vector<std::string>& v_msg){
+void GnssParser::fOutput(const std::string& msg, std::vector<std::string>& v_msg){
     std::ofstream output;
     std::string file_output = "../data/output.txt";
     output.open(file_output, std::ios::app);
@@ -136,28 +148,28 @@ void GnssParser::fOutput(std::vector<std::string>& v_msg){
     if (msg_type_map.count(msg_header_type)) {
         const auto& field_map = msg_type_map.at(msg_header_type);
 
-        int test_size = field_map.size() != v_msg.size();
-
-        if (field_map.size() != v_msg.size()){
-            for (int i = 0; i < field_map.size() - v_msg.size(); i++){
-                v_msg.insert(v_msg.end() - stable_data_from_end_gsv, "");
-            }
+        if (msg_header_type == "GSV"){
+            gsvMsgCorrection(v_msg);
         }
+
+        output << "Message itself is " << msg << "\n";
         
         for (const auto& [index, name] : field_map) {
-            bool dev_idx = index == 1;
+            // bool dev_idx = index == 1;
             bool qual_stat_pos_nav_flag = name == "quality" || name == "status" || name == "pos_mode" || name == "nav_mode";
             bool op_mode_flag = name == "op_mode";
             bool datum_flag = name == "datum";
             bool data_available = !v_msg[index].empty();
             
             if (data_available){
-                if (index == 0) output << "Message header type is " << msg_header_type << "\n";
-                else if (msg_header_device == "GP" && dev_idx) output << "Message header device is GPS, SBAS or QZSS\n";
-                else if (msg_header_device == "GL" && dev_idx) output << "Message header device is GLONASS\n";
-                else if (msg_header_device == "GA" && dev_idx) output << "Message header device is Galileo\n";
-                else if (msg_header_device == "GB" && dev_idx) output << "Message header device is BeiDou\n";
-                else if (msg_header_device == "GN" && dev_idx) output << "Message header device is any combination of GNSS\n";
+                if (index == 0){ 
+                output << "Message header type is " << msg_header_type << "\n";
+                    if (msg_header_device == "GP") output << "Message header device is GPS, SBAS or QZSS\n";
+                    else if (msg_header_device == "GL") output << "Message header device is GLONASS\n";
+                    else if (msg_header_device == "GA") output << "Message header device is Galileo\n";
+                    else if (msg_header_device == "GB") output << "Message header device is BeiDou\n";
+                    else if (msg_header_device == "GN") output << "Message header device is any combination of GNSS\n";
+                }
                 else if (name == "time") output << "UTC time stamp for this message is : " << formatUtcConverter(v_msg[index]);
                 else if (name == "lat" || name == "lon") output << latLotConverter(v_msg[index]);
                 else if (name == "ns" || name == "ew") output << "Direction " << v_msg[index] << " direction\n";
@@ -188,9 +200,9 @@ void GnssParser::fOutput(std::vector<std::string>& v_msg){
                 else if (qual_stat_pos_nav_flag && (v_msg[index] == "0" || v_msg[index] == "N" || v_msg[index] == "1")) output << "No fix\n";
                 else if (name == "num_sv") output << "Number of used satellites : " << v_msg[index] << "\n";
                 else if (name == "hdop") output << "Horizontal Dilution of Precision is : " << v_msg[index] << "\n";
-                else if (name == "alt") output << "Altitude above mean sea level : " << v_msg[index];
-                else if (name == "alt_unit" || name =="sep_unit") output << " Unit of altitude and geoid sepparation is meter.\n";
-                else if (name == "sep") output << "Difference between ellipsoid and mean sea level : " << v_msg[index];
+                else if (name == "alt") output << "Altitude above mean sea level : " << v_msg[index] << " Unit of altitude is meter.\n";
+                // else if (name == "alt_unit" || name =="sep_unit") output << " Unit of altitude and geoid sepparation is meter.\n";
+                else if (name == "sep") output << "Difference between ellipsoid and mean sea level : " << v_msg[index] << " Unit sepparation is meter \n";
                 else if (name == "diff_age") output << "Age of differential corrections is " << v_msg[index] << "if 0 then when DGPS is not used\n";
                 else if (name == "diff_station") output << "ID of station providing differential corrections is " << v_msg[index]<< "if 0 then when DGPS is not used\n";
                 else if (name == "cs") output << "Checksum is " << v_msg[index] << "\n\n";
@@ -200,12 +212,13 @@ void GnssParser::fOutput(std::vector<std::string>& v_msg){
                 else if (name == "vdop") output << "Vertical dilution of precision is " << v_msg[index] << "\n";
                 else if (name == "system_id") output << "NMEA-defined GNSS system ID " << v_msg[index] << "\n";
                 else if (name == "num_msg") output << "Total number of GSV messages being output is  " << v_msg[index] << "\n";
+                else if (name == "msg_num") output << "Number of this message specific message is  " << v_msg[index] << "\n";
                 else if (name == "num_sv_v") output << "Number of known satellites in view regarding both the talker ID and the signalId is " << v_msg[index] << "\n";
                 else if (name == "elv") output << "Elevation is " << v_msg[index] << "\n";
                 else if (name == "az") output << "Azimuth " << v_msg[index] << "\n";
                 else if (name == "cno") output << "Signal strength " << v_msg[index] << " if null when not tracking\n";
                 else if (name == "signal_id") output << "NMEA-defined GNSS signal ID " << v_msg[index] << "\n";
-                else if (name == "spd") output << "Speed over ground in knots " << v_msg[index] << "\n";
+                else if (name == "spd" || name == "sog_n") output << "Speed over ground in knots " << v_msg[index] << "\n";
                 else if (name == "cog") output << "Course over ground in degree " << v_msg[index] << "\n";
                 else if (name == "date") output << "Date in day, month, year format " << dateConverter(v_msg[index]) << "\n";
                 else if (name == "mv") output << "Magnetic variation value is " << v_msg[index] << "\n";
@@ -214,9 +227,9 @@ void GnssParser::fOutput(std::vector<std::string>& v_msg){
                 else if (name == "cog_t") output << "Course over ground " << v_msg[index];
                 else if (name == "cog_t_unit" || name == "cog_m_unit") output << "Unit of cource over ground is degree \n";
                 else if (name == "cog_m") output << "Course over ground (magnetic) " << v_msg[index] << "\n";
-                else if (name == "sog_n") output << "Speed over ground in knots " << v_msg[index];
+                // else if (name == "sog_n") output << "Speed over ground in knots " << v_msg[index];
                 // else if (name == "sog_n_unit") output << "fixed in knots\n";
-                else if (name == "sog_k") output << "Speed over ground in kilometers per hour" << v_msg[index] << "\n";
+                else if (name == "sog_k") output << "Speed over ground in kilometers per hour " << v_msg[index] << "\n";
                 // else if (name == "sog_k_unit") output << "fixed in kilometers per hour\n";
                 else if (name == "range_rms") output << "RMS value of the standard deviation of the ranges " << v_msg[index] << "\n";//
                 else if (name == "std_major") output << "Standard deviation of semi-major axis " << v_msg[index] << "\n";
