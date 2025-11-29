@@ -1,24 +1,29 @@
-#include "../include/gnss_parser.h"
+#include "gnss_parser.hpp"
 #include <optional>
 
 
-int main(){
+int main(int argc, char* argv[]){
 
     GnssParser parser;
+    std::string pathToInput;
 
-    std::ifstream data_file("../data/text.txt");
-    std::string file_line_str;
-    std::vector<std::string> msg_lines;
+    if (argc > 1) pathToInput = argv[1];
+    else pathToInput = "data/text.txt";
+    
+    std::ifstream dataFile(pathToInput);
+    std::string fileLineStr;
+    std::vector<std::string> msgLines;
     std::string header;
     std::stringstream ss;
 
-    while(getline(data_file, file_line_str)){
-        msg_lines.push_back(file_line_str);
+    while(getline(dataFile, fileLineStr)){
+        msgLines.push_back(fileLineStr);
     }
-    for (int i = 0; i < msg_lines.size(); i++){
-        header = parser.parseHeader(msg_lines.at(i));
-        parser.parseMsg(header, msg_lines.at(i));
+    for (int i = 0; i < msgLines.size(); i++){
+        header = parser.parseHeader(msgLines.at(i));
+        parser.processMsg(header, msgLines.at(i));
     }
 
     return 0;
 }
+
